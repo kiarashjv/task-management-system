@@ -1,11 +1,25 @@
 package com.taskmanagement.userservice.model;
 
-import jakarta.persistence.*;
+import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
+
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "users")
-public class User {
+public class User implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
@@ -18,6 +32,37 @@ public class User {
 
     @Column(nullable = false)
     private String email;
+
+    // Implement UserDetails methods
+    @JsonIgnore
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return List.of(new SimpleGrantedAuthority("ROLE_USER"));
+    }
+
+    @JsonIgnore
+    @Override
+    public boolean isAccountNonExpired(){
+        return true;
+    }
+
+    @JsonIgnore
+    @Override
+    public boolean isAccountNonLocked(){
+        return true;
+    }
+
+    @JsonIgnore
+    @Override
+    public boolean isCredentialsNonExpired(){
+        return true;
+    }
+    
+    @JsonIgnore
+    @Override
+    public boolean isEnabled(){
+        return true;
+    }
     
 
     // Getters and Setters, constructors
@@ -30,6 +75,7 @@ public class User {
         this.id = id;
     }
 
+    @Override
     public String getUsername() {
         return username;
     }
@@ -37,7 +83,8 @@ public class User {
     public void setUsername(String username) {
         this.username = username;
     }
-
+    
+    @Override
     public String getPassword() {
         return password;
     }
