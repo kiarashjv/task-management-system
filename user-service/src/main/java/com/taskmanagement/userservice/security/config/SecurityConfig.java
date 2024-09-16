@@ -1,4 +1,4 @@
-package com.taskmanagement.userservice.config;
+package com.taskmanagement.userservice.security.config;
 
 import java.security.KeyFactory;
 import java.security.interfaces.RSAPrivateKey;

@@ -1,12 +1,14 @@
-package com.taskmanagement.userservice.service;
+package com.taskmanagement.userservice.user.service;
 
-import com.taskmanagement.userservice.model.User;
-import com.taskmanagement.userservice.repository.UserRepository;
+import com.taskmanagement.userservice.user.model.User;
+import com.taskmanagement.userservice.user.repository.UserRepository;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
@@ -67,5 +69,18 @@ class UserServiceTest {
         assertNotNull(foundUser);
         assertEquals("testuser", foundUser.getUsername());
         verify(userRepository).findByUsername("testuser");
+    }
+
+    @Test
+    void whenLoadUserByUsername_userNotFound_thenThrowsException(){
+        // Arrange
+        String username="nonexistentuser";
+        when(userRepository.findByUsername(username)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        UsernameNotFoundException exception = assertThrows(UsernameNotFoundException.class, 
+            () -> userService.loadUserByUsername(username));        
+        assertEquals("User not found", exception.getMessage());
+        verify(userRepository).findByUsername(username);
     }
 }

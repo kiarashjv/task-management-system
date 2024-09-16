@@ -1,4 +1,4 @@
-package com.taskmanagement.userservice.service;
+package com.taskmanagement.userservice.auth.service;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -12,7 +12,7 @@ import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.stereotype.Service;
 
 @Service
-public class AuthService {
+public class AuthService implements  IAuthService {
     
     private final JwtEncoder encoder;
     private final AuthenticationManager authenticationManager;
@@ -22,6 +22,7 @@ public class AuthService {
         this.authenticationManager = authenticationManager;
     }
 
+    @Override
     public String authenticateAndGetToken(String username, String password) {
         Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, password));
         
