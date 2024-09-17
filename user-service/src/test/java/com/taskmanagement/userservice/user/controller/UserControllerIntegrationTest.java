@@ -1,5 +1,10 @@
 package com.taskmanagement.userservice.user.controller;
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
+import static org.hamcrest.CoreMatchers.hasItem;
 import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -16,6 +21,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.taskmanagement.userservice.security.SecurityConfigTest;
+import com.taskmanagement.userservice.user.model.Role;
 import com.taskmanagement.userservice.user.model.User;
 import com.taskmanagement.userservice.user.service.IUserService;
 
@@ -35,7 +41,8 @@ class UserControllerIntegrationTest {
     @Test
     @WithMockUser
     void whenCreateUser_thenReturns200() throws Exception {
-        User user = new User("testuser", "password", "test@example.com");
+        Set<Role> roles = new HashSet<>(Arrays.asList(Role.USER));
+        User user = new User("testuser", "password", "test@example.com", roles);
         when(userService.createUser(any(User.class))).thenReturn(user);
 
         mockMvc.perform(post("/api/users")
@@ -43,7 +50,25 @@ class UserControllerIntegrationTest {
                 .content(objectMapper.writeValueAsString(user)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").value("testuser"))
-                .andExpect(jsonPath("$.email").value("test@example.com"));
+                .andExpect(jsonPath("$.email").value("test@example.com"))
+                .andExpect(jsonPath("$.roles", hasItem("USER")));
+    }
+
+    @Test
+    @WithMockUser
+    void whenCreateUserWithMultipleRoles_thenReturns200() throws Exception {
+        Set<Role> roles= new HashSet<>(Arrays.asList(Role.USER,Role.ADMIN));
+        User user = new User("adminuser", "password", "admin@example.com", roles);
+        when(userService.createUser(any(User.class))).thenReturn(user);
+
+        mockMvc.perform(post("/api/users")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(user)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("adminuser"))
+                .andExpect(jsonPath("$.email").value("admin@example.com"))
+                .andExpect(jsonPath("$.roles", hasItem("USER")))
+                .andExpect(jsonPath("$.roles", hasItem("ADMIN")));
     }
 
     @Test
@@ -58,6 +83,7 @@ class UserControllerIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.username").value("Username is required"))
                 .andExpect(jsonPath("$.password").value("Password is required"))
-                .andExpect(jsonPath("$.email").value("Email is required"));
+                .andExpect(jsonPath("$.email").value("Email is required"))
+                .andExpect(jsonPath("$.roles").doesNotExist());
     }
 }
