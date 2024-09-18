@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.hamcrest.CoreMatchers.hasItem;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasSize;
 import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
@@ -212,8 +213,12 @@ class UserControllerIntegrationTest {
                 .content(objectMapper.writeValueAsString(invalidUserRequest)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.username").value("Username is required"))
-                .andExpect(jsonPath("$.password").value("Password is required"))
-                .andExpect(jsonPath("$.email").value("Email should be valid"));
+                .andExpect(jsonPath("$.password").value(containsInAnyOrder(
+                    "Password is required",
+                    "Password must be at least 8 characters long"
+                )))
+                .andExpect(jsonPath("$.email").value("Email should be valid"))
+                .andExpect(jsonPath("$.roles").value("User must have at least one role"));
     
         verify(userService, never()).updateUser(eq(userId), any(User.class));
     }
@@ -306,13 +311,103 @@ class UserControllerIntegrationTest {
         ));
     }
 
+    @Test
+    @WithMockUser(roles="ADMIN")
+    void whenCreateUserWithInvalidEmail_thenReturns400() throws Exception {
+        UserRequest userRequest = new UserRequest("testuser", "password", "invalid-email", new HashSet<>(Arrays.asList(Role.USER)));
+
+        mockMvc.perform(post("/api/users")
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(objectMapper.writeValueAsString(userRequest)))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.email").value("Email should be valid"));
+
+        verify(userService, never()).createUser(any(User.class));
+    }
+
+    @Test
+    @WithMockUser(roles="ADMIN")
+    void whenCreateUserWithTooShortPassword_thenReturns400() throws Exception {
+        UserRequest userRequest = new UserRequest("testuser", "short", "test@example.com", new HashSet<>(Arrays.asList(Role.USER)));
+
+        mockMvc.perform(post("/api/users")
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(objectMapper.writeValueAsString(userRequest)))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.password").value("Password must be at least 8 characters long"));
+
+        verify(userService, never()).createUser(any(User.class));
+    }
+
+    @Test
+    @WithMockUser(roles="ADMIN")
+    void whenCreateUserWithoutAnyRoles_thenReturns400() throws Exception {
+        UserRequest userRequest = new UserRequest("testuser", "password", "test@example.com", new HashSet<>());
+
+        mockMvc.perform(post("/api/users")
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(objectMapper.writeValueAsString(userRequest)))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.roles").value("User must have at least one role"));
+
+        verify(userService, never()).createUser(any(User.class));
+    }
+
+    @Test
+    @WithMockUser(roles="USER")
+    void whenGetAllUsers_thenReturns403() throws Exception {
+        mockMvc.perform(get("/api/users"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles="USER")
+    void whenCreateUser_thenReturns403() throws Exception {
+        UserRequest userRequest = new UserRequest("testuser", "password", "test@example.com", new HashSet<>(Arrays.asList(Role.USER)));
+
+        mockMvc.perform(post("/api/users")
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(objectMapper.writeValueAsString(userRequest)))
+        .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "testuser", roles = "USER")
+    void whenUpdateUser_thenReturns403() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UserRequest userRequest = new UserRequest("updateduser", "newpassword", "updated@example.com", new HashSet<>(Arrays.asList(Role.USER)));
     
-    // TODO: Implement test for creating a user with an existing username
-    // TODO: Implement test for creating a user with an invalid email format
-    // TODO: Implement test for creating a user with a too short password
-    // TODO: Implement test for creating a user without any roles
-    // TODO: Implement test for accessing endpoints with insufficient permissions
-    // TODO: Implement test for accessing endpoints without authentication
+        mockMvc.perform(put("/api/users/{id}", userId)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(userRequest)))
+            .andExpect(status().isForbidden());
+    }
 
+    @Test
+    @WithMockUser(roles="USER")
+    void whenDeleteUser_thenReturns403() throws Exception {
+        UUID userId = UUID.randomUUID();
 
+        mockMvc.perform(delete("/api/users/{id}", userId))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void whenAccessEndpointWithoutAuthentication_thenReturns401() throws Exception {
+        mockMvc.perform(get("/api/users"))
+                .andExpect(status().isUnauthorized());
+    
+        mockMvc.perform(post("/api/users")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new UserRequest("testuser", "password", "test@example.com", new HashSet<>(Arrays.asList(Role.USER))))))
+                .andExpect(status().isUnauthorized());
+    
+        mockMvc.perform(put("/api/users/{id}", UUID.randomUUID())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new UserRequest("updateduser", "newpassword", "updated@example.com", new HashSet<>(Arrays.asList(Role.USER))))))
+                .andExpect(status().isUnauthorized());
+    
+        mockMvc.perform(delete("/api/users/{id}", UUID.randomUUID()))
+                .andExpect(status().isUnauthorized());
+    }
 }
