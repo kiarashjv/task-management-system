@@ -17,6 +17,7 @@ import com.taskmanagement.userservice.user.service.IUserService;
 
 import jakarta.validation.Valid;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -67,17 +68,15 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or #id == authentication.principal.id")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('USER') and #id == authentication.principal.username)")
     public ResponseEntity<UserResponse> updateUser(@PathVariable UUID id, @Valid @RequestBody UserRequest userRequest) {
         logger.info("Received request to update user with ID: {}", id);
         User user = new User();
         user.setUsername(userRequest.getUsername());
         user.setEmail(userRequest.getEmail());
         user.setRoles(userRequest.getRoles());
-        // Only set password if it's provided in the request
-        if (userRequest.getPassword() != null && !userRequest.getPassword().isEmpty()) {
-            user.setPassword(userRequest.getPassword());
-        }
+        user.setPassword(userRequest.getPassword());
+        
         User updatedUser = userService.updateUser(id, user);
         if (updatedUser == null) {
             logger.warn("User with ID: {} not found", id);
@@ -114,11 +113,11 @@ public class UserController {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Object> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        Map<String, String> errors = new HashMap<>();
+        Map<String, List<String>> errors = new HashMap<>();
         ex.getBindingResult().getAllErrors().forEach((error) -> {
             String fieldName = ((FieldError) error).getField();
             String errorMessage = error.getDefaultMessage();
-            errors.put(fieldName, errorMessage);
+            errors.computeIfAbsent(fieldName, k -> new ArrayList<>()).add(errorMessage);
         });
         return ResponseEntity.badRequest().body(errors);
     }
