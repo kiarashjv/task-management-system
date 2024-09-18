@@ -1,22 +1,28 @@
 package com.taskmanagement.userservice.user.dto;
 
 import com.taskmanagement.userservice.user.model.Role;
+
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.Email;
 
 import java.util.Set;
+
+import jakarta.validation.constraints.NotEmpty;
 
 public class UserRequest {
     @NotBlank(message = "Username is required")
     private String username;
 
     @NotBlank(message = "Password is required")
+    @Size(min = 8, message = "Password must be at least 8 characters long")
     private String password;
 
     @NotBlank(message = "Email is required")
     @Email(message = "Email should be valid")
     private String email;
 
+    @NotEmpty(message = "User must have at least one role")
     private Set<Role> roles;
 
     // Default constructor
