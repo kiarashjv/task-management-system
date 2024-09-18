@@ -46,7 +46,17 @@ public class UserService implements IUserService {
 
     @Override
     public User updateUser(UUID id, User user) {
-        return userRepository.save(user);
+        return userRepository.findById(id)
+            .map(existingUser->{
+                existingUser.setUsername(user.getUsername());
+                existingUser.setEmail(user.getEmail());
+                existingUser.setRoles(user.getRoles());
+                if(user.getPassword() != null && !user.getPassword().isEmpty()){
+                    existingUser.setPassword(passwordEncoder.encode(user.getPassword()));
+                }
+                return userRepository.save(existingUser);
+            })
+            .orElse(null);
     }
 
     @Override
