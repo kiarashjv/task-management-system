@@ -5,6 +5,7 @@ import java.util.Date;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -16,6 +17,8 @@ import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -217,4 +220,15 @@ class TaskServiceTest {
         verifyNoMoreInteractions(taskRepository);
     }
 
+    @Test
+    void whenDeleteTask_thenTaskIsNotFound() {
+        // Arrange
+        UUID nonExistentTaskId = UUID.randomUUID();
+        doNothing().when(taskRepository).deleteById(nonExistentTaskId);
+
+        // Act & Assert
+        assertDoesNotThrow(() -> taskService.deleteTask(nonExistentTaskId));
+        verify(taskRepository).deleteById(nonExistentTaskId);
+        verifyNoMoreInteractions(taskRepository);
+    }
 }
