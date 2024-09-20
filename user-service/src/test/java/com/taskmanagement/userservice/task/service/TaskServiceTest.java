@@ -7,15 +7,16 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.MockitoAnnotations;
-import org.springframework.security.test.context.support.WithMockUser;
 
 import com.taskmanagement.userservice.task.model.Priority;
 import com.taskmanagement.userservice.task.model.Status;
@@ -46,7 +47,6 @@ class TaskServiceTest {
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
     void whenCreateTask_thenTaskIsSaved() {
         // Arrange
         User assignedUser = new User();
@@ -76,6 +76,30 @@ class TaskServiceTest {
         assertEquals(assignedUser, savedTask.getAssignedUser());
         verify(userService).getUserById(assignedUser.getId());
         verify(taskRepository).save(any(Task.class));
+    }
+
+    @Test
+    void whenCreateTask_thenAssignedUserNotFound() {
+        // Arrange
+        User nonExistentUser = new User();
+        nonExistentUser.setId(UUID.randomUUID());
+
+        Task task = new Task();
+        task.setTitle(TEST_TITLE);
+        task.setDescription(TEST_DESCRIPTION);
+        task.setStatus(TEST_STATUS);
+        task.setPriority(TEST_PRIORITY);
+        task.setDueDate(new Date(LocalDate.now().plusDays(1).toEpochDay()));
+        task.setAssignedUser(nonExistentUser);
+
+        // Act
+        when(userService.getUserById(any(UUID.class))).thenReturn(Optional.empty());
+
+        // Assert
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> taskService.createTask(task));
+        assertEquals("Assigned user not found", exception.getMessage());
+        verify(userService).getUserById(nonExistentUser.getId());
+        verify(taskRepository, never()).save(any(Task.class));
     }
 
 }
