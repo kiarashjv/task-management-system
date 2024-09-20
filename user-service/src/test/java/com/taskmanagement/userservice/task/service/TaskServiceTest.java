@@ -6,6 +6,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -131,6 +132,20 @@ class TaskServiceTest {
         assertEquals(TEST_PRIORITY, actualTask.getPriority());
         assertEquals(dueDate, actualTask.getDueDate());
         verify(taskRepository).findById(taskId);
+    }
+
+    @Test
+    void whenGetTaskById_thenTaskNotFound() {
+        // Arrange
+        UUID nonExistentTaskId = UUID.randomUUID();
+
+        // Act
+        when(taskRepository.findById(nonExistentTaskId)).thenReturn(Optional.empty());
+
+        // Assert
+        Optional<Task> retrievedTask = taskService.getTaskById(nonExistentTaskId);
+        assertFalse(retrievedTask.isPresent());
+        verify(taskRepository).findById(nonExistentTaskId);
     }
 
 }
