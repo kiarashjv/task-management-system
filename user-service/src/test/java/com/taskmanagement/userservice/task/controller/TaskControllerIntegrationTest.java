@@ -73,4 +73,22 @@ public class TaskControllerIntegrationTest {
                 .andExpect(jsonPath("$.createdBy").isEmpty());
     }
 
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void whenCreateTaskWithInvalidData_thenReturns400() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Date pastDate = Date.from(LocalDateTime.now().minusDays(1).atZone(ZoneId.systemDefault()).toInstant());
+        TaskRequest taskRequest = new TaskRequest(null, null, null, null, pastDate, userId);
+
+        when(userService.getUserById(userId)).thenReturn(Optional.of(new User()));
+
+        mockMvc.perform(post("/api/tasks")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(taskRequest)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title").value("Title is required"))
+                .andExpect(jsonPath("$.description").value("Description is required"))
+                .andExpect(jsonPath("$.status").value("Status is required"))
+                .andExpect(jsonPath("$.priority").value("Priority is required"));
+    }
 }
