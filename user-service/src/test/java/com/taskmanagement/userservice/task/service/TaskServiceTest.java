@@ -148,4 +148,43 @@ class TaskServiceTest {
         verify(taskRepository).findById(nonExistentTaskId);
     }
 
+    @Test
+    void whenUpdateTask_thenTaskIsUpdated() {
+        // Arrange
+        UUID taskId = UUID.randomUUID();
+        Task existingTask = new Task();
+        existingTask.setId(taskId);
+        existingTask.setTitle("Old Title");
+        existingTask.setDescription("Old Description");
+        existingTask.setStatus(Status.TODO);
+        existingTask.setPriority(Priority.LOW);
+        existingTask.setDueDate(new Date(LocalDate.now().toEpochDay()));
+
+        Task updatedTaskDetails = new Task();
+        updatedTaskDetails.setTitle(TEST_TITLE);
+        updatedTaskDetails.setDescription(TEST_DESCRIPTION);
+        updatedTaskDetails.setStatus(TEST_STATUS);
+        updatedTaskDetails.setPriority(TEST_PRIORITY);
+        Date newDueDate = new Date(LocalDate.now().plusDays(1).toEpochDay());
+        updatedTaskDetails.setDueDate(newDueDate);
+
+        when(taskRepository.findById(taskId)).thenReturn(Optional.of(existingTask));
+        when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        Task updatedTask = taskService.updateTask(taskId, updatedTaskDetails);
+
+        // Assert
+        assertNotNull(updatedTask);
+        assertEquals(taskId, updatedTask.getId());
+        assertEquals(TEST_TITLE, updatedTask.getTitle());
+        assertEquals(TEST_DESCRIPTION, updatedTask.getDescription());
+        assertEquals(TEST_STATUS, updatedTask.getStatus());
+        assertEquals(TEST_PRIORITY, updatedTask.getPriority());
+        assertEquals(newDueDate, updatedTask.getDueDate());
+        verify(taskRepository).findById(taskId);
+        verify(taskRepository).save(any(Task.class));
+    }
+    
+
 }
