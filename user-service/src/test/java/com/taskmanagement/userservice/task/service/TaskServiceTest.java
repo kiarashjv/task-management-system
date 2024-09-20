@@ -8,6 +8,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
@@ -100,6 +101,36 @@ class TaskServiceTest {
         assertEquals("Assigned user not found", exception.getMessage());
         verify(userService).getUserById(nonExistentUser.getId());
         verify(taskRepository, never()).save(any(Task.class));
+    }
+
+    @Test
+    void whenGetTaskById_thenTaskIsReturned() {
+        // Arrange
+        UUID taskId = UUID.randomUUID();
+        Task task = new Task();
+        task.setId(taskId);
+        task.setTitle(TEST_TITLE);
+        task.setDescription(TEST_DESCRIPTION);
+        task.setStatus(TEST_STATUS);
+        task.setPriority(TEST_PRIORITY);
+        Date dueDate = new Date(LocalDate.now().plusDays(1).toEpochDay());
+        task.setDueDate(dueDate);
+
+        when(taskRepository.findById(taskId)).thenReturn(Optional.of(task));
+
+        // Act
+        Optional<Task> retrievedTask = taskService.getTaskById(taskId);
+
+        // Assert
+        assertTrue(retrievedTask.isPresent());
+        Task actualTask = retrievedTask.get();
+        assertEquals(taskId, actualTask.getId());
+        assertEquals(TEST_TITLE, actualTask.getTitle());
+        assertEquals(TEST_DESCRIPTION, actualTask.getDescription());
+        assertEquals(TEST_STATUS, actualTask.getStatus());
+        assertEquals(TEST_PRIORITY, actualTask.getPriority());
+        assertEquals(dueDate, actualTask.getDueDate());
+        verify(taskRepository).findById(taskId);
     }
 
 }
