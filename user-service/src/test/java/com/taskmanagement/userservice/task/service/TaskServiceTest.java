@@ -18,6 +18,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import org.mockito.MockitoAnnotations;
 
@@ -201,6 +202,19 @@ class TaskServiceTest {
         assertNull(updatedTask);
         verify(taskRepository).findById(nonExistentTaskId);
         verify(taskRepository, never()).save(any(Task.class));
+    }
+
+    @Test
+    void whenDeleteTask_thenTaskIsDeleted() {
+        // Arrange
+        UUID taskId = UUID.randomUUID();
+
+        // Act
+        taskService.deleteTask(taskId);
+
+        // Assert
+        verify(taskRepository).deleteById(taskId);
+        verifyNoMoreInteractions(taskRepository);
     }
 
 }
