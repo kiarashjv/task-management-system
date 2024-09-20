@@ -41,10 +41,6 @@ public class TaskController {
         logger.info("Received request to create task: {}", taskRequest.getTitle());
         Task task = convertToTask(taskRequest);
         Task createdTask = taskService.createTask(task);
-        if (createdTask == null) {
-            logger.warn("Failed to create task: {}", taskRequest.getTitle());
-            return ResponseEntity.badRequest().body(new TaskResponse("Failed to create task"));
-        }
         logger.info("Task created successfully with ID: {}", createdTask.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(new TaskResponse(createdTask));
     }
