@@ -1,7 +1,9 @@
 package com.taskmanagement.userservice.task.service;
 
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -229,6 +231,29 @@ class TaskServiceTest {
         // Act & Assert
         assertDoesNotThrow(() -> taskService.deleteTask(nonExistentTaskId));
         verify(taskRepository).deleteById(nonExistentTaskId);
+        verifyNoMoreInteractions(taskRepository);
+    }
+
+    @Test
+    void whenGetAllTasks_thenTasksAreReturned() {
+        // Arrange
+        Task task1 = new Task(UUID.randomUUID(), "Task 1", "Description 1", Status.TODO, Priority.LOW, new Date(), new User(), new User());
+        Task task2 = new Task(UUID.randomUUID(), "Task 2", "Description 2", Status.IN_PROGRESS, Priority.MEDIUM, new Date(), new User(), new User());
+        Task task3 = new Task(UUID.randomUUID(), "Task 3", "Description 3", Status.COMPLETED, Priority.HIGH, new Date(), new User(), new User());
+        List<Task> tasks = Arrays.asList(task1, task2, task3);
+        when(taskRepository.findAll()).thenReturn(tasks);
+
+        // Act
+        List<Task> result = taskService.getAllTasks();
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(3, result.size());
+        assertEquals(tasks, result);
+        assertTrue(result.contains(task1));
+        assertTrue(result.contains(task2));
+        assertTrue(result.contains(task3));
+        verify(taskRepository).findAll();
         verifyNoMoreInteractions(taskRepository);
     }
 }
