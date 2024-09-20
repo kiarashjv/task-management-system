@@ -1,8 +1,8 @@
 package com.taskmanagement.userservice.task.model;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.UUID;
-import java.time.LocalDateTime;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -28,7 +28,7 @@ import jakarta.validation.constraints.Size;
 public class Task {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @NotBlank(message = "Title is required")
@@ -63,6 +63,21 @@ public class Task {
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+    // Constructors
+    public Task() {
+    }
+
+    public Task(UUID id, String title, String description, Status status, Priority priority, Date dueDate, User assignedUser, User createdBy) {
+        this.id = id;
+        this.title = title;
+        this.description = description;
+        this.status = status;
+        this.priority = priority;
+        this.dueDate = dueDate;
+        this.assignedUser = assignedUser;
+        this.createdBy = createdBy;
+    }
 
     // Getters and setters
     public UUID getId() {
