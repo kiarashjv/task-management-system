@@ -8,6 +8,7 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -19,6 +20,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -129,6 +131,41 @@ public class TaskControllerIntegrationTest {
                 .andExpect(status().isForbidden());
 
         verify(taskService, never()).createTask(any());
+    }
+
+    // Update task
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void whenUpdateTask_thenReturns200() throws Exception {
+        UUID taskId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        Date futureDate = Date.from(LocalDateTime.now().plusDays(1).atZone(ZoneId.systemDefault()).toInstant());
+        TaskRequest taskRequest = new TaskRequest("Task 1", "Description 1", Status.TODO, Priority.LOW, futureDate, userId);
+
+        User mockUser = new User();
+        mockUser.setId(userId);
+
+        when(userService.getUserById(userId)).thenReturn(Optional.of(mockUser));
+
+        Task updatedTask = new Task(taskId, "Task 1", "Description 1", Status.TODO, Priority.LOW, futureDate, mockUser, null);
+
+        when(taskService.updateTask(eq(taskId), any(Task.class))).thenReturn(updatedTask);
+
+        mockMvc.perform(put("/api/tasks/{id}", taskId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(taskRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(taskId.toString()))
+                .andExpect(jsonPath("$.title").value("Task 1"))
+                .andExpect(jsonPath("$.description").value("Description 1"))
+                .andExpect(jsonPath("$.status").value("TODO"))
+                .andExpect(jsonPath("$.priority").value("LOW"))
+                .andExpect(jsonPath("$.dueDate").exists())
+                .andExpect(jsonPath("$.assignedUser").exists())
+                .andExpect(jsonPath("$.createdBy").isEmpty());
+
+        verify(userService).getUserById(userId);
+        verify(taskService).updateTask(eq(taskId), any(Task.class));
     }
 
 }
