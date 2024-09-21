@@ -114,4 +114,21 @@ public class TaskControllerIntegrationTest {
 
     }
 
+    @Test
+    @WithMockUser(roles = "USER")
+    void whenCreateTaskWithUserRole_thenReturns403() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Date futureDate = Date.from(LocalDateTime.now().plusDays(1).atZone(ZoneId.systemDefault()).toInstant());
+        TaskRequest taskRequest = new TaskRequest("Task 1", "Description 1", Status.TODO, Priority.LOW, futureDate, userId);
+
+        when(userService.getUserById(userId)).thenReturn(Optional.of(new User()));
+
+        mockMvc.perform(post("/api/tasks")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(taskRequest)))
+                .andExpect(status().isForbidden());
+
+        verify(taskService, never()).createTask(any());
+    }
+
 }
