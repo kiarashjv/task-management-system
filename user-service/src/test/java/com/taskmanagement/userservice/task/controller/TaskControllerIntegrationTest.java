@@ -8,6 +8,8 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -46,6 +48,7 @@ public class TaskControllerIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    // Create Task
     @Test
     @WithMockUser(roles = "ADMIN")
     void whenCreateTask_thenReturns201() throws Exception {
@@ -91,4 +94,24 @@ public class TaskControllerIntegrationTest {
                 .andExpect(jsonPath("$.status").value("Status is required"))
                 .andExpect(jsonPath("$.priority").value("Priority is required"));
     }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void whenCreateTaskNonExistentUser_thenReturns404() throws Exception {
+        UUID nonExistentUserId = UUID.randomUUID();
+        Date futureDate = Date.from(LocalDateTime.now().plusDays(1).atZone(ZoneId.systemDefault()).toInstant());
+        TaskRequest taskRequest = new TaskRequest("Task 1", "Description 1", Status.TODO, Priority.LOW, futureDate, nonExistentUserId);
+
+        when(userService.getUserById(nonExistentUserId)).thenReturn(Optional.empty());
+
+        mockMvc.perform(post("/api/tasks")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(taskRequest)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("User not found"));
+
+        verify(taskService, never()).createTask(any());
+
+    }
+
 }
