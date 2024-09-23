@@ -3,6 +3,7 @@ package com.taskmanagement.userservice.task.controller;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -10,6 +11,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -19,6 +21,9 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -280,4 +285,20 @@ public class TaskControllerIntegrationTest {
 
         verify(taskService, never()).updateTask(any(UUID.class), any(Task.class));
     }
+
+    @Test
+    @WithMockJwt(roles = "ADMIN")
+    void whenDeleteTaskAsAdmin_thenReturns204() throws Exception {
+        UUID taskId = UUID.randomUUID();
+
+        // Assuming the task exists, no exception is thrown
+        doNothing().when(taskService).deleteTask(taskId);
+
+        mockMvc.perform(delete("/api/tasks/{id}", taskId))
+                .andExpect(status().isNoContent());
+
+        verify(taskService).deleteTask(taskId);
+    }
+
+
 }
