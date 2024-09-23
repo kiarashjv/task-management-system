@@ -1,16 +1,15 @@
 package com.taskmanagement.userservice.task.dto;
 
-import com.taskmanagement.userservice.task.model.Status;
-import com.taskmanagement.userservice.task.model.Priority;
-
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
-import jakarta.validation.constraints.Future;
-
 import java.util.Date;
 import java.util.UUID;
 
+import com.taskmanagement.userservice.task.model.Priority;
+import com.taskmanagement.userservice.task.model.Status;
+
+import jakarta.validation.constraints.Future;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 public class TaskRequest {
 
@@ -31,14 +30,14 @@ public class TaskRequest {
     @Future(message = "Due date must be in the future")
     private Date dueDate;
 
+    @NotNull(message = "Assigned User ID is required")
     private UUID assignedUserId;
 
     // Constructors
     public TaskRequest() {
     }
 
-    public TaskRequest(String title, String description, Status status, Priority priority, Date dueDate,
-            UUID assignedUserId) {
+    public TaskRequest(String title, String description, Status status, Priority priority, Date dueDate, UUID assignedUserId) {
         this.title = title;
         this.description = description;
         this.status = status;
@@ -47,7 +46,7 @@ public class TaskRequest {
         this.assignedUserId = assignedUserId;
     }
 
-    // Getters and setters
+    // Getters and Setters
     public String getTitle() {
         return title;
     }
@@ -56,6 +55,7 @@ public class TaskRequest {
         this.title = title;
     }
 
+    // (Repeat for other fields)
     public String getDescription() {
         return description;
     }
