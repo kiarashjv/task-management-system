@@ -25,7 +25,6 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -36,6 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.taskmanagement.userservice.security.SecurityConfigTest;
+import com.taskmanagement.userservice.security.WithMockJwt;
 import com.taskmanagement.userservice.user.dto.UserRequest;
 import com.taskmanagement.userservice.user.exception.UserAlreadyExistsException;
 import com.taskmanagement.userservice.user.exception.UserNotFoundException;
@@ -57,15 +57,15 @@ class UserControllerIntegrationTest {
     private ObjectMapper objectMapper;
 
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithMockJwt(roles = "ADMIN")
     void whenCreateUser_thenReturns201AndPasswordIsNotReturned() throws Exception {
         Set<Role> roles = new HashSet<>();
         roles.add(Role.USER);
         UserRequest userRequest = new UserRequest("testuser", "password123", "test@example.com", roles);
-        
+
         User createdUser = new User("testuser", "password123", "test@example.com", roles);
         when(userService.createUser(any(User.class))).thenReturn(createdUser);
-    
+
         mockMvc.perform(post("/api/users")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(userRequest)))
@@ -74,18 +74,18 @@ class UserControllerIntegrationTest {
                 .andExpect(jsonPath("$.email").value("test@example.com"))
                 .andExpect(jsonPath("$.roles", hasItem("USER")))
                 .andExpect(jsonPath("$.password").doesNotExist());
-    
+
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithMockJwt(roles = "ADMIN")
     void whenCreateUserWithMultipleRoles_thenReturns201() throws Exception {
         Set<Role> roles = new HashSet<>(Arrays.asList(Role.USER, Role.ADMIN));
         UserRequest userRequest = new UserRequest("adminuser", "password", "admin@example.com", roles);
         User createdUser = new User("adminuser", "password", "admin@example.com", roles);
-        
+
         when(userService.createUser(any(User.class))).thenReturn(createdUser);
-    
+
         mockMvc.perform(post("/api/users")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(userRequest)))
@@ -95,21 +95,21 @@ class UserControllerIntegrationTest {
                 .andExpect(jsonPath("$.roles", hasItem("USER")))
                 .andExpect(jsonPath("$.roles", hasItem("ADMIN")))
                 .andExpect(jsonPath("$.password").doesNotExist());
-    
-        verify(userService).createUser(argThat(user -> 
-            user.getUsername().equals("adminuser") &&
-            user.getPassword().equals("password") &&
-            user.getEmail().equals("admin@example.com") &&
-            user.getRoles().containsAll(roles)
+
+        verify(userService).createUser(argThat(user
+                -> user.getUsername().equals("adminuser")
+                && user.getPassword().equals("password")
+                && user.getEmail().equals("admin@example.com")
+                && user.getRoles().containsAll(roles)
         ));
     }
-    
+
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithMockJwt(roles = "ADMIN")
     void whenCreateInvalidUser_thenReturns400() throws Exception {
         UserRequest invalidUserRequest = new UserRequest();
         // Omitting required fields to trigger validation error
-    
+
         mockMvc.perform(post("/api/users")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(invalidUserRequest)))
@@ -117,20 +117,20 @@ class UserControllerIntegrationTest {
                 .andExpect(jsonPath("$.username").value("Username is required"))
                 .andExpect(jsonPath("$.password").value("Password is required"))
                 .andExpect(jsonPath("$.email").value("Email is required"));
-    
+
         // Verify that the userService was not called
         verify(userService, never()).createUser(any(User.class));
     }
 
     @Test
-    @WithMockUser(roles="ADMIN")
+    @WithMockJwt(roles = "ADMIN")
     void whenGetUserById_thenReturns200() throws Exception {
         UUID userId = UUID.randomUUID();
         User user = new User("testuser", "password", "test@example.com", new HashSet<>(Arrays.asList(Role.USER)));
         user.setId(userId);
-    
+
         when(userService.getUserById(userId)).thenReturn(Optional.of(user));
-    
+
         mockMvc.perform(get("/api/users/{id}", userId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(userId.toString()))
@@ -138,35 +138,34 @@ class UserControllerIntegrationTest {
                 .andExpect(jsonPath("$.email").value("test@example.com"))
                 .andExpect(jsonPath("$.roles", hasItem("USER")))
                 .andExpect(jsonPath("$.password").doesNotExist());
-    
+
         verify(userService).getUserById(userId);
     }
 
-
     @Test
-    @WithMockUser(roles="ADMIN")
+    @WithMockJwt(roles = "ADMIN")
     void whenGetUserById_thenReturns404() throws Exception {
         UUID nonExistentUserId = UUID.randomUUID();
-    
+
         when(userService.getUserById(nonExistentUserId)).thenReturn(Optional.empty());
-    
+
         mockMvc.perform(get("/api/users/{id}", nonExistentUserId))
                 .andExpect(status().isNotFound());
-    
+
         verify(userService).getUserById(nonExistentUserId);
     }
 
     @Test
-    @WithMockUser(roles="ADMIN")
+    @WithMockJwt(roles = "ADMIN")
     void whenUpdateUser_thenReturns200() throws Exception {
         UUID userId = UUID.randomUUID();
         UserRequest userRequest = new UserRequest("updateduser", "newpassword", "updated@example.com", new HashSet<>(Arrays.asList(Role.USER)));
-    
+
         User updatedUser = new User("updateduser", "newpassword", "updated@example.com", new HashSet<>(Arrays.asList(Role.USER)));
         updatedUser.setId(userId);
-    
+
         when(userService.updateUser(eq(userId), any(User.class))).thenReturn(updatedUser);
-    
+
         mockMvc.perform(put("/api/users/{id}", userId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(userRequest)))
@@ -176,92 +175,91 @@ class UserControllerIntegrationTest {
                 .andExpect(jsonPath("$.email").value("updated@example.com"))
                 .andExpect(jsonPath("$.roles", hasItem("USER")))
                 .andExpect(jsonPath("$.password").doesNotExist());
-    
+
         // Verify that the userService was called with the correct arguments
-        verify(userService).updateUser(eq(userId), argThat(user -> 
-            user.getUsername().equals("updateduser") &&
-            user.getPassword().equals("newpassword") &&
-            user.getEmail().equals("updated@example.com") &&
-            user.getRoles().contains(Role.USER)
+        verify(userService).updateUser(eq(userId), argThat(user
+                -> user.getUsername().equals("updateduser")
+                && user.getPassword().equals("newpassword")
+                && user.getEmail().equals("updated@example.com")
+                && user.getRoles().contains(Role.USER)
         ));
     }
 
     @Test
-    @WithMockUser(roles="ADMIN")
+    @WithMockJwt(roles = "ADMIN")
     void whenUpdateNonExistentUser_thenReturns404() throws Exception {
         UUID nonExistentUserId = UUID.randomUUID();
         UserRequest userRequest = new UserRequest("updateduser", "newpassword", "updated@example.com", new HashSet<>(Arrays.asList(Role.USER)));
-    
+
         when(userService.updateUser(eq(nonExistentUserId), any(User.class))).thenReturn(null);
-    
+
         mockMvc.perform(put("/api/users/{id}", nonExistentUserId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(userRequest)))
                 .andExpect(status().isNotFound());
-    
+
         verify(userService).updateUser(eq(nonExistentUserId), any(User.class));
     }
 
     @Test
-    @WithMockUser(roles="ADMIN")
+    @WithMockJwt(roles = "ADMIN")
     void whenUpdateUserWithInvalidData_thenReturns400() throws Exception {
         UUID userId = UUID.randomUUID();
         UserRequest invalidUserRequest = new UserRequest("", "", "invalid-email", null);
-    
+
         mockMvc.perform(put("/api/users/{id}", userId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(invalidUserRequest)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.username").value("Username is required"))
                 .andExpect(jsonPath("$.password").value(containsInAnyOrder(
-                    "Password is required",
-                    "Password must be at least 8 characters long"
+                        "Password is required",
+                        "Password must be at least 8 characters long"
                 )))
                 .andExpect(jsonPath("$.email").value("Email should be valid"))
                 .andExpect(jsonPath("$.roles").value("User must have at least one role"));
-    
+
         verify(userService, never()).updateUser(eq(userId), any(User.class));
     }
 
     @Test
-    @WithMockUser(roles="ADMIN")
+    @WithMockJwt(roles = "ADMIN")
     void whenDeleteUser_thenReturns204() throws Exception {
         UUID userId = UUID.randomUUID();
-    
+
         doNothing().when(userService).deleteUser(userId);
-    
+
         mockMvc.perform(delete("/api/users/{id}", userId))
                 .andExpect(status().isNoContent());
-    
+
         // Verify that the userService was called with the correct argument
         verify(userService).deleteUser(userId);
     }
 
     @Test
-    @WithMockUser(roles="ADMIN")
+    @WithMockJwt(roles = "ADMIN")
     void whenDeleteNonExistentUser_thenReturns404() throws Exception {
         UUID nonExistentUserId = UUID.randomUUID();
-    
+
         doThrow(new UserNotFoundException("User not found")).when(userService).deleteUser(nonExistentUserId);
-    
+
         mockMvc.perform(delete("/api/users/{id}", nonExistentUserId))
                 .andExpect(status().isNotFound());
-    
+
         verify(userService).deleteUser(nonExistentUserId);
     }
 
-
     @Test
-    @WithMockUser(roles="ADMIN")
+    @WithMockJwt(roles = "ADMIN")
     void whenGetAllUsers_thenReturns200() throws Exception {
         List<User> users = Arrays.asList(
-            new User("testuser1", "password1", "test1@example.com", new HashSet<>(Arrays.asList(Role.USER))),
-            new User("testuser2", "password2", "test2@example.com", new HashSet<>(Arrays.asList(Role.USER))),
-            new User("testuser3", "password3", "test3@example.com", new HashSet<>(Arrays.asList(Role.USER)))
+                new User("testuser1", "password1", "test1@example.com", new HashSet<>(Arrays.asList(Role.USER))),
+                new User("testuser2", "password2", "test2@example.com", new HashSet<>(Arrays.asList(Role.USER))),
+                new User("testuser3", "password3", "test3@example.com", new HashSet<>(Arrays.asList(Role.USER)))
         );
-    
+
         when(userService.getAllUsers()).thenReturn(users);
-    
+
         mockMvc.perform(get("/api/users"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(3)))
@@ -275,116 +273,116 @@ class UserControllerIntegrationTest {
                 .andExpect(jsonPath("$[2].email").value("test3@example.com"))
                 .andExpect(jsonPath("$[2].roles", hasItem("USER")))
                 .andExpect(jsonPath("$[*].password").doesNotExist());
-    
+
         verify(userService).getAllUsers();
     }
 
     @Test
-    @WithMockUser(roles="ADMIN")
+    @WithMockJwt(roles = "ADMIN")
     void whenGetAllUsers_thenReturns200WithEmptyList() throws Exception {
         when(userService.getAllUsers()).thenReturn(Collections.emptyList());
-    
+
         mockMvc.perform(get("/api/users"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(0)));
-    
+
         verify(userService).getAllUsers();
     }
 
     @Test
-    @WithMockUser(roles="ADMIN")
+    @WithMockJwt(roles = "ADMIN")
     void whenCreateUserWithExistingUsername_thenReturns400() throws Exception {
         UserRequest userRequest = new UserRequest("existinguser", "password", "existing@example.com", new HashSet<>(Arrays.asList(Role.USER)));
-    
+
         when(userService.createUser(any(User.class))).thenThrow(new UserAlreadyExistsException("User already exists"));
-    
+
         mockMvc.perform(post("/api/users")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(userRequest)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("User already exists"));
-    
-        verify(userService).createUser(argThat(user -> 
-            user.getUsername().equals("existinguser") &&
-            user.getEmail().equals("existing@example.com") &&
-            user.getRoles().contains(Role.USER)
+
+        verify(userService).createUser(argThat(user
+                -> user.getUsername().equals("existinguser")
+                && user.getEmail().equals("existing@example.com")
+                && user.getRoles().contains(Role.USER)
         ));
     }
 
     @Test
-    @WithMockUser(roles="ADMIN")
+    @WithMockJwt(roles = "ADMIN")
     void whenCreateUserWithInvalidEmail_thenReturns400() throws Exception {
         UserRequest userRequest = new UserRequest("testuser", "password", "invalid-email", new HashSet<>(Arrays.asList(Role.USER)));
 
         mockMvc.perform(post("/api/users")
-        .contentType(MediaType.APPLICATION_JSON)
-        .content(objectMapper.writeValueAsString(userRequest)))
-        .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.email").value("Email should be valid"));
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(userRequest)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.email").value("Email should be valid"));
 
         verify(userService, never()).createUser(any(User.class));
     }
 
     @Test
-    @WithMockUser(roles="ADMIN")
+    @WithMockJwt(roles = "ADMIN")
     void whenCreateUserWithTooShortPassword_thenReturns400() throws Exception {
         UserRequest userRequest = new UserRequest("testuser", "short", "test@example.com", new HashSet<>(Arrays.asList(Role.USER)));
 
         mockMvc.perform(post("/api/users")
-        .contentType(MediaType.APPLICATION_JSON)
-        .content(objectMapper.writeValueAsString(userRequest)))
-        .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.password").value("Password must be at least 8 characters long"));
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(userRequest)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.password").value("Password must be at least 8 characters long"));
 
         verify(userService, never()).createUser(any(User.class));
     }
 
     @Test
-    @WithMockUser(roles="ADMIN")
+    @WithMockJwt(roles = "ADMIN")
     void whenCreateUserWithoutAnyRoles_thenReturns400() throws Exception {
         UserRequest userRequest = new UserRequest("testuser", "password", "test@example.com", new HashSet<>());
 
         mockMvc.perform(post("/api/users")
-        .contentType(MediaType.APPLICATION_JSON)
-        .content(objectMapper.writeValueAsString(userRequest)))
-        .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.roles").value("User must have at least one role"));
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(userRequest)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.roles").value("User must have at least one role"));
 
         verify(userService, never()).createUser(any(User.class));
     }
 
     @Test
-    @WithMockUser(roles="USER")
+    @WithMockJwt(roles = "USER")
     void whenGetAllUsers_thenReturns403() throws Exception {
         mockMvc.perform(get("/api/users"))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    @WithMockUser(roles="USER")
+    @WithMockJwt(roles = "USER")
     void whenCreateUser_thenReturns403() throws Exception {
         UserRequest userRequest = new UserRequest("testuser", "password", "test@example.com", new HashSet<>(Arrays.asList(Role.USER)));
 
         mockMvc.perform(post("/api/users")
-        .contentType(MediaType.APPLICATION_JSON)
-        .content(objectMapper.writeValueAsString(userRequest)))
-        .andExpect(status().isForbidden());
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(userRequest)))
+                .andExpect(status().isForbidden());
     }
 
     @Test
-    @WithMockUser(username = "testuser", roles = "USER")
+    @WithMockJwt(username = "testuser", roles = "USER")
     void whenUpdateUser_thenReturns403() throws Exception {
         UUID userId = UUID.randomUUID();
         UserRequest userRequest = new UserRequest("updateduser", "newpassword", "updated@example.com", new HashSet<>(Arrays.asList(Role.USER)));
-    
+
         mockMvc.perform(put("/api/users/{id}", userId)
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(objectMapper.writeValueAsString(userRequest)))
-            .andExpect(status().isForbidden());
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(userRequest)))
+                .andExpect(status().isForbidden());
     }
 
     @Test
-    @WithMockUser(roles="USER")
+    @WithMockJwt(roles = "USER")
     void whenDeleteUser_thenReturns403() throws Exception {
         UUID userId = UUID.randomUUID();
 
@@ -396,17 +394,17 @@ class UserControllerIntegrationTest {
     void whenAccessEndpointWithoutAuthentication_thenReturns401() throws Exception {
         mockMvc.perform(get("/api/users"))
                 .andExpect(status().isUnauthorized());
-    
+
         mockMvc.perform(post("/api/users")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(new UserRequest("testuser", "password", "test@example.com", new HashSet<>(Arrays.asList(Role.USER))))))
                 .andExpect(status().isUnauthorized());
-    
+
         mockMvc.perform(put("/api/users/{id}", UUID.randomUUID())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(new UserRequest("updateduser", "newpassword", "updated@example.com", new HashSet<>(Arrays.asList(Role.USER))))))
                 .andExpect(status().isUnauthorized());
-    
+
         mockMvc.perform(delete("/api/users/{id}", UUID.randomUUID()))
                 .andExpect(status().isUnauthorized());
     }
