@@ -61,4 +61,14 @@ public class TaskService implements ITaskService {
         return taskRepository.findAll();
     }
 
+    @Override
+    public boolean isTaskAssignedToUser(String username, UUID taskId) {
+        Optional<Task> optionalTask = taskRepository.findById(taskId);
+        if (optionalTask.isEmpty()) {
+            return false;
+        }
+        Task task = optionalTask.get();
+        return task.getAssignedUser() != null && task.getAssignedUser().getUsername().equals(username);
+    }
+
 }
