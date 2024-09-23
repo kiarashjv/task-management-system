@@ -152,5 +152,43 @@ public class TaskControllerIntegrationTest {
         verify(taskService).updateTask(eq(taskId), any(Task.class));
     }
 
+    @Test
+    @WithMockJwt(username = "adminuser", roles = {"ADMIN"})
+    void whenAdminUpdatesAnyTask_thenReturns200() throws Exception {
+        // Arrange
+        UUID taskId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        Date upcomingDate = Date.from(LocalDateTime.now().plusDays(1)
+                .atZone(ZoneId.systemDefault()).toInstant());
+
+        TaskRequest taskRequest = new TaskRequest("Admin Update", "Admin Description",
+                Status.IN_PROGRESS, Priority.HIGH, upcomingDate, userId);
+
+        User assignedUser = new User();
+        assignedUser.setId(userId);
+        assignedUser.setUsername("regularuser");
+        assignedUser.setRoles(Set.of(Role.USER));
+
+        Task updatedTask = new Task(taskId, "Admin Update", "Admin Description",
+                Status.IN_PROGRESS, Priority.HIGH, upcomingDate, assignedUser, null);
+
+        when(userService.getUserById(userId)).thenReturn(Optional.of(assignedUser));
+        when(taskService.updateTask(eq(taskId), any(Task.class))).thenReturn(updatedTask);
+
+        // Act & Assert
+        mockMvc.perform(put("/api/tasks/{id}", taskId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(taskRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(taskId.toString()))
+                .andExpect(jsonPath("$.title").value("Admin Update"))
+                .andExpect(jsonPath("$.description").value("Admin Description"))
+                .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
+                .andExpect(jsonPath("$.priority").value("HIGH"))
+                .andExpect(jsonPath("$.dueDate").exists())
+                .andExpect(jsonPath("$.assignedUser.username").value("regularuser"));
+
+        verify(taskService).updateTask(eq(taskId), any(Task.class));
+    }
 
 }
