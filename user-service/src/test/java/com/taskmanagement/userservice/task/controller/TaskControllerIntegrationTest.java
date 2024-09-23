@@ -300,5 +300,21 @@ public class TaskControllerIntegrationTest {
         verify(taskService).deleteTask(taskId);
     }
 
+    @Test
+    @WithMockJwt(roles = "ADMIN")
+    void whenGetAllTasksAsAdmin_thenReturns200WithTasks() throws Exception {
+        List<Task> tasks = List.of(
+                new Task(UUID.randomUUID(), "Task 1", "Description 1", Status.TODO, Priority.LOW, new Date(), null, null),
+                new Task(UUID.randomUUID(), "Task 2", "Description 2", Status.IN_PROGRESS, Priority.HIGH, new Date(), null, null)
+        );
+        when(taskService.getAllTasks()).thenReturn(tasks);
 
+        mockMvc.perform(get("/api/tasks"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].title").value("Task 1"))
+                .andExpect(jsonPath("$[1].title").value("Task 2"));
+
+        verify(taskService).getAllTasks();
+    }
 }
