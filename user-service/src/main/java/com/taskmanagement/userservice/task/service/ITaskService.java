@@ -17,4 +17,7 @@ public interface ITaskService {
     void deleteTask(UUID id);
 
     List<Task> getAllTasks();
+
+    boolean isTaskAssignedToUser(String username, UUID taskId);
+
 }
