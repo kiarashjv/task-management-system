@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -33,6 +34,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.taskmanagement.userservice.security.SecurityConfigTest;
 import com.taskmanagement.userservice.security.WithMockJwt;
 import com.taskmanagement.userservice.task.dto.TaskRequest;
+import com.taskmanagement.userservice.task.exception.TaskNotFoundException;
 import com.taskmanagement.userservice.task.model.Priority;
 import com.taskmanagement.userservice.task.model.Status;
 import com.taskmanagement.userservice.task.model.Task;
@@ -286,6 +288,7 @@ public class TaskControllerIntegrationTest {
         verify(taskService, never()).updateTask(any(UUID.class), any(Task.class));
     }
 
+    // Delete task
     @Test
     @WithMockJwt(roles = "ADMIN")
     void whenDeleteTaskAsAdmin_thenReturns204() throws Exception {
@@ -300,6 +303,21 @@ public class TaskControllerIntegrationTest {
         verify(taskService).deleteTask(taskId);
     }
 
+    @Test
+    @WithMockJwt(roles = "ADMIN")
+    void whenDeleteNonExistentTaskAsAdmin_thenReturns404() throws Exception {
+        UUID taskId = UUID.randomUUID();
+
+        // Simulate TaskNotFoundException when deleting
+        doThrow(new TaskNotFoundException("Task not found")).when(taskService).deleteTask(taskId);
+
+        mockMvc.perform(delete("/api/tasks/{id}", taskId))
+                .andExpect(status().isNotFound());
+
+        verify(taskService).deleteTask(taskId);
+    }
+
+    // Get task
     @Test
     @WithMockJwt(roles = "ADMIN")
     void whenGetAllTasksAsAdmin_thenReturns200WithTasks() throws Exception {
