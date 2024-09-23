@@ -317,6 +317,16 @@ public class TaskControllerIntegrationTest {
         verify(taskService).deleteTask(taskId);
     }
 
+    @Test
+    void whenDeleteTaskAsUnauthenticated_thenReturns401() throws Exception {
+        UUID taskId = UUID.randomUUID();
+
+        mockMvc.perform(delete("/api/tasks/{id}", taskId))
+                .andExpect(status().isUnauthorized());
+
+        verify(taskService, never()).deleteTask(any(UUID.class));
+    }
+    
     // Get task
     @Test
     @WithMockJwt(roles = "ADMIN")
