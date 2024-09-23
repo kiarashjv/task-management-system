@@ -335,4 +335,26 @@ public class TaskControllerIntegrationTest {
 
         verify(taskService).getAllTasks();
     }
+
+    @Test
+    @WithMockJwt(username = "assignedUser", roles = "USER")
+    void whenGetAssignedTaskAsUser_thenReturns200() throws Exception {
+        UUID taskId = UUID.randomUUID();
+        User assignedUser = new User();
+        assignedUser.setId(UUID.randomUUID());
+        assignedUser.setUsername("assignedUser");
+
+        Task task = new Task(taskId, "User Task", "User Description", Status.TODO, Priority.MEDIUM, new Date(), assignedUser, null);
+        when(taskService.getTaskById(taskId)).thenReturn(Optional.of(task));
+        when(taskService.isTaskAssignedToUser("assignedUser", taskId)).thenReturn(true);
+
+        mockMvc.perform(get("/api/tasks/{id}", taskId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(taskId.toString()))
+                .andExpect(jsonPath("$.title").value("User Task"))
+                .andExpect(jsonPath("$.assignedUser.username").value("assignedUser"));
+
+        verify(taskService).getTaskById(taskId);
+        verify(taskService).isTaskAssignedToUser("assignedUser", taskId);
+    }
 }
