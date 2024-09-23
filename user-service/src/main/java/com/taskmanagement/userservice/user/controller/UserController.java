@@ -29,6 +29,7 @@ import org.springframework.http.HttpStatus;
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
+
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
     private final IUserService userService;
@@ -41,7 +42,7 @@ public class UserController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserResponse> createUser(@Valid @RequestBody UserRequest userRequest) {
         logger.info("Received request to create user: {}", userRequest.getUsername());
-        
+
         User user = new User();
         user.setUsername(userRequest.getUsername());
         user.setPassword(userRequest.getPassword());
@@ -68,7 +69,7 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or (hasRole('USER') and #id == authentication.principal.username)")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('USER') and #id == principal.id)")
     public ResponseEntity<UserResponse> updateUser(@PathVariable UUID id, @Valid @RequestBody UserRequest userRequest) {
         logger.info("Received request to update user with ID: {}", id);
         User user = new User();
@@ -76,7 +77,7 @@ public class UserController {
         user.setEmail(userRequest.getEmail());
         user.setRoles(userRequest.getRoles());
         user.setPassword(userRequest.getPassword());
-        
+
         User updatedUser = userService.updateUser(id, user);
         if (updatedUser == null) {
             logger.warn("User with ID: {} not found", id);
@@ -101,14 +102,14 @@ public class UserController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'PROJECT_MANAGER')")
-    public ResponseEntity<List<UserResponse>> getAllUsers(){
+    public ResponseEntity<List<UserResponse>> getAllUsers() {
         logger.info("Received request to get all users");
         List<User> users = userService.getAllUsers();
         List<UserResponse> userResponses = users.stream()
                 .map(UserResponse::new)
                 .collect(Collectors.toList());
         logger.info("Retrieved {} users", userResponses.size());
-        return ResponseEntity.ok(userResponses); 
+        return ResponseEntity.ok(userResponses);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
