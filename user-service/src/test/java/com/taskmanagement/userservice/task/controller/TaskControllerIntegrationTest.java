@@ -233,4 +233,34 @@ public class TaskControllerIntegrationTest {
         verify(taskService).isTaskAssignedToUser(username, taskId);
     }
 
+    @Test
+    @WithMockJwt(username = "otheruser", roles = {"USER"})
+    void whenUserUpdatesOthersTask_thenReturns403() throws Exception {
+        // Arrange
+        UUID taskId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        String actingUsername = "otheruser";
+        Date upcomingDate = Date.from(LocalDateTime.now().plusDays(1)
+                .atZone(ZoneId.systemDefault()).toInstant());
+
+        TaskRequest taskRequest = new TaskRequest("Unauthorized Update", "Should Fail",
+                Status.IN_PROGRESS, Priority.HIGH, upcomingDate, userId);
+
+        User assignedUser = new User();
+        assignedUser.setId(userId);
+        assignedUser.setUsername("regularuser");
+        assignedUser.setRoles(Set.of(Role.USER));
+
+        when(taskService.isTaskAssignedToUser(actingUsername, taskId)).thenReturn(false);
+
+        // Act & Assert
+        mockMvc.perform(put("/api/tasks/{id}", taskId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(taskRequest)))
+                .andExpect(status().isForbidden());
+
+        verify(taskService, never()).updateTask(eq(taskId), any(Task.class));
+        verify(taskService).isTaskAssignedToUser(actingUsername, taskId);
+    }
+
 }
