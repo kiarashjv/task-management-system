@@ -191,4 +191,46 @@ public class TaskControllerIntegrationTest {
         verify(taskService).updateTask(eq(taskId), any(Task.class));
     }
 
+    @Test
+    @WithMockJwt(username = "regularuser", roles = {"USER"})
+    void whenUserUpdatesOwnTask_thenReturns200() throws Exception {
+        // Arrange
+        UUID taskId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        String username = "regularuser";
+        Date upcomingDate = Date.from(LocalDateTime.now().plusDays(1)
+                .atZone(ZoneId.systemDefault()).toInstant());
+
+        TaskRequest taskRequest = new TaskRequest("User Updated Task", "User Updated Description",
+                Status.IN_PROGRESS, Priority.MEDIUM, upcomingDate, userId);
+
+        User assignedUser = new User();
+        assignedUser.setId(userId);
+        assignedUser.setUsername("regularuser");
+        assignedUser.setRoles(Set.of(Role.USER));
+
+        Task updatedTask = new Task(taskId, "User Updated Task", "User Updated Description",
+                Status.IN_PROGRESS, Priority.MEDIUM, upcomingDate, assignedUser, null);
+
+        when(userService.getUserById(userId)).thenReturn(Optional.of(assignedUser));
+        when(taskService.updateTask(eq(taskId), any(Task.class))).thenReturn(updatedTask);
+        when(taskService.isTaskAssignedToUser(username, taskId)).thenReturn(true);
+
+        // Act & Assert
+        mockMvc.perform(put("/api/tasks/{id}", taskId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(taskRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(taskId.toString()))
+                .andExpect(jsonPath("$.title").value("User Updated Task"))
+                .andExpect(jsonPath("$.description").value("User Updated Description"))
+                .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
+                .andExpect(jsonPath("$.priority").value("MEDIUM"))
+                .andExpect(jsonPath("$.dueDate").exists())
+                .andExpect(jsonPath("$.assignedUser").exists());
+
+        verify(taskService).updateTask(eq(taskId), any(Task.class));
+        verify(taskService).isTaskAssignedToUser(username, taskId);
+    }
+
 }
