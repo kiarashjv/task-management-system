@@ -263,4 +263,21 @@ public class TaskControllerIntegrationTest {
         verify(taskService).isTaskAssignedToUser(actingUsername, taskId);
     }
 
+    @Test
+    void whenUnauthenticatedUserUpdatesTask_thenReturns401() throws Exception {
+        // Arrange
+        UUID taskId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        TaskRequest taskRequest = new TaskRequest("Unauthenticated Update", "Should Fail",
+                Status.IN_PROGRESS, Priority.MEDIUM, new Date(), userId);
+
+        // Act & Assert
+        mockMvc.perform(put("/api/tasks/{id}", taskId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(taskRequest)))
+                .andExpect(status().isUnauthorized());
+
+        verify(taskService, never()).updateTask(any(UUID.class), any(Task.class));
+    }
 }
