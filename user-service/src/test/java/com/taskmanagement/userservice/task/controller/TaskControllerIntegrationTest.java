@@ -357,4 +357,15 @@ public class TaskControllerIntegrationTest {
         verify(taskService).getTaskById(taskId);
         verify(taskService).isTaskAssignedToUser("assignedUser", taskId);
     }
+
+    @Test
+    @WithMockJwt(roles = "USER")
+    void whenGetAllTasksAsUser_thenReturns403() throws Exception {
+        mockMvc.perform(get("/api/tasks"))
+                .andExpect(status().isForbidden());
+
+        verify(taskService, never()).getAllTasks();
+    }
+    
+
 }
