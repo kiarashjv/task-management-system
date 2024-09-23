@@ -326,7 +326,7 @@ public class TaskControllerIntegrationTest {
 
         verify(taskService, never()).deleteTask(any(UUID.class));
     }
-    
+
     // Get task
     @Test
     @WithMockJwt(roles = "ADMIN")
@@ -376,6 +376,13 @@ public class TaskControllerIntegrationTest {
 
         verify(taskService, never()).getAllTasks();
     }
-    
+
+    @Test
+    void whenGetAllTasksAsUnauthenticated_thenReturns401() throws Exception {
+        mockMvc.perform(get("/api/tasks"))
+                .andExpect(status().isUnauthorized());
+
+        verify(taskService, never()).getAllTasks();
+    }
 
 }
