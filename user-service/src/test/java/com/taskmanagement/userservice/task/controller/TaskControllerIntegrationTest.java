@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -17,7 +18,6 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -26,11 +26,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.taskmanagement.userservice.security.SecurityConfigTest;
+import com.taskmanagement.userservice.security.WithMockJwt;
 import com.taskmanagement.userservice.task.dto.TaskRequest;
 import com.taskmanagement.userservice.task.model.Priority;
 import com.taskmanagement.userservice.task.model.Status;
 import com.taskmanagement.userservice.task.model.Task;
 import com.taskmanagement.userservice.task.service.ITaskService;
+import com.taskmanagement.userservice.user.model.Role;
 import com.taskmanagement.userservice.user.model.User;
 import com.taskmanagement.userservice.user.service.IUserService;
 
@@ -41,7 +43,7 @@ public class TaskControllerIntegrationTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockBean(name = "taskService")
     private ITaskService taskService;
 
     @MockBean
@@ -52,18 +54,15 @@ public class TaskControllerIntegrationTest {
 
     // Create Task
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithMockJwt(roles = "ADMIN")
     void whenCreateTask_thenReturns201() throws Exception {
         UUID userId = UUID.randomUUID();
         Date futureDate = Date.from(LocalDateTime.now().plusDays(1).atZone(ZoneId.systemDefault()).toInstant());
         TaskRequest taskRequest = new TaskRequest("Task 1", "Description 1", Status.TODO, Priority.LOW, futureDate, userId);
-
         Task createdTask = new Task(UUID.randomUUID(), "Task 1", "Description 1", Status.TODO, Priority.LOW, futureDate, null, null);
         when(taskService.createTask(any(Task.class))).thenReturn(createdTask);
-
         // Mock the userService.getUserById() method
         when(userService.getUserById(userId)).thenReturn(Optional.of(new User()));
-
         mockMvc.perform(post("/api/tasks")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(taskRequest)))
@@ -79,14 +78,12 @@ public class TaskControllerIntegrationTest {
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithMockJwt(roles = "ADMIN")
     void whenCreateTaskWithInvalidData_thenReturns400() throws Exception {
         UUID userId = UUID.randomUUID();
         Date pastDate = Date.from(LocalDateTime.now().minusDays(1).atZone(ZoneId.systemDefault()).toInstant());
         TaskRequest taskRequest = new TaskRequest(null, null, null, null, pastDate, userId);
-
         when(userService.getUserById(userId)).thenReturn(Optional.of(new User()));
-
         mockMvc.perform(post("/api/tasks")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(taskRequest)))
@@ -98,59 +95,47 @@ public class TaskControllerIntegrationTest {
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithMockJwt(roles = "ADMIN")
     void whenCreateTaskNonExistentUser_thenReturns404() throws Exception {
         UUID nonExistentUserId = UUID.randomUUID();
         Date futureDate = Date.from(LocalDateTime.now().plusDays(1).atZone(ZoneId.systemDefault()).toInstant());
         TaskRequest taskRequest = new TaskRequest("Task 1", "Description 1", Status.TODO, Priority.LOW, futureDate, nonExistentUserId);
-
         when(userService.getUserById(nonExistentUserId)).thenReturn(Optional.empty());
-
         mockMvc.perform(post("/api/tasks")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(taskRequest)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("User not found"));
-
         verify(taskService, never()).createTask(any());
-
     }
 
     @Test
-    @WithMockUser(roles = "USER")
+    @WithMockJwt(roles = "USER")
     void whenCreateTaskWithUserRole_thenReturns403() throws Exception {
         UUID userId = UUID.randomUUID();
         Date futureDate = Date.from(LocalDateTime.now().plusDays(1).atZone(ZoneId.systemDefault()).toInstant());
         TaskRequest taskRequest = new TaskRequest("Task 1", "Description 1", Status.TODO, Priority.LOW, futureDate, userId);
-
         when(userService.getUserById(userId)).thenReturn(Optional.of(new User()));
-
         mockMvc.perform(post("/api/tasks")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(taskRequest)))
                 .andExpect(status().isForbidden());
-
         verify(taskService, never()).createTask(any());
     }
 
     // Update task
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithMockJwt(roles = "ADMIN")
     void whenUpdateTask_thenReturns200() throws Exception {
         UUID taskId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
         Date futureDate = Date.from(LocalDateTime.now().plusDays(1).atZone(ZoneId.systemDefault()).toInstant());
         TaskRequest taskRequest = new TaskRequest("Task 1", "Description 1", Status.TODO, Priority.LOW, futureDate, userId);
-
         User mockUser = new User();
         mockUser.setId(userId);
-
         when(userService.getUserById(userId)).thenReturn(Optional.of(mockUser));
-
         Task updatedTask = new Task(taskId, "Task 1", "Description 1", Status.TODO, Priority.LOW, futureDate, mockUser, null);
-
         when(taskService.updateTask(eq(taskId), any(Task.class))).thenReturn(updatedTask);
-
         mockMvc.perform(put("/api/tasks/{id}", taskId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(taskRequest)))
@@ -163,9 +148,9 @@ public class TaskControllerIntegrationTest {
                 .andExpect(jsonPath("$.dueDate").exists())
                 .andExpect(jsonPath("$.assignedUser").exists())
                 .andExpect(jsonPath("$.createdBy").isEmpty());
-
         verify(userService).getUserById(userId);
         verify(taskService).updateTask(eq(taskId), any(Task.class));
     }
+
 
 }
