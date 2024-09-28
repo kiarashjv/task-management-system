@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -15,10 +16,10 @@ import com.taskmanagement.userservice.user.model.User;
 import com.taskmanagement.userservice.user.repository.UserRepository;
 
 @Service
-public class UserService implements IUserService {
+public class UserService implements IUserService, UserDetailsService {
 
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
-    
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -47,16 +48,16 @@ public class UserService implements IUserService {
     @Override
     public User updateUser(UUID id, User user) {
         return userRepository.findById(id)
-            .map(existingUser->{
-                existingUser.setUsername(user.getUsername());
-                existingUser.setEmail(user.getEmail());
-                existingUser.setRoles(user.getRoles());
-                if(user.getPassword() != null && !user.getPassword().isEmpty()){
-                    existingUser.setPassword(passwordEncoder.encode(user.getPassword()));
-                }
-                return userRepository.save(existingUser);
-            })
-            .orElse(null);
+                .map(existingUser -> {
+                    existingUser.setUsername(user.getUsername());
+                    existingUser.setEmail(user.getEmail());
+                    existingUser.setRoles(user.getRoles());
+                    if (user.getPassword() != null && !user.getPassword().isEmpty()) {
+                        existingUser.setPassword(passwordEncoder.encode(user.getPassword()));
+                    }
+                    return userRepository.save(existingUser);
+                })
+                .orElse(null);
     }
 
     @Override
@@ -65,7 +66,7 @@ public class UserService implements IUserService {
     }
 
     @Override
-    public List<User> getAllUsers(){
+    public List<User> getAllUsers() {
         return userRepository.findAll();
     }
 }
