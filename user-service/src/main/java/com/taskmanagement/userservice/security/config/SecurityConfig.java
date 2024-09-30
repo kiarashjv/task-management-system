@@ -7,6 +7,8 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Collection;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +23,8 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -140,10 +144,20 @@ public class SecurityConfig {
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
         grantedAuthoritiesConverter.setAuthoritiesClaimName("roles"); // Map 'roles' claim
-        grantedAuthoritiesConverter.setAuthorityPrefix("ROLE_"); // Prefix with 'ROLE_'
+        grantedAuthoritiesConverter.setAuthorityPrefix(""); // Remove the prefix
 
         JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
-        jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter);
+        jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(jwt -> {
+            Collection<GrantedAuthority> authorities = grantedAuthoritiesConverter.convert(jwt);
+            logger.info("JWT claims: {}", jwt.getClaims());
+            logger.info("Extracted authorities: {}", authorities);
+            return authorities.stream()
+                    .map(authority -> new SimpleGrantedAuthority(
+                    authority.getAuthority().startsWith("ROLE_")
+                    ? authority.getAuthority()
+                    : "ROLE_" + authority.getAuthority()))
+                    .collect(Collectors.toList());
+        });
         jwtAuthenticationConverter.setPrincipalClaimName("sub"); // Use 'sub' as principal
         return jwtAuthenticationConverter;
     }
