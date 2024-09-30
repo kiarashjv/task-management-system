@@ -1,8 +1,8 @@
 export interface User {
-  id: number;
+  id: string;
   username: string;
   email: string;
-  role: 'admin' | 'user';
+  roles: string[];
 }
 
 export interface Task {
