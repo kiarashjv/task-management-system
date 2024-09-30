@@ -1,4 +1,14 @@
 import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 
 const TaskList = () => {
   // Placeholder task data
@@ -9,25 +19,37 @@ const TaskList = () => {
   ];
 
   return (
-    <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md">
-      <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-        {tasks.map((task) => (
-          <li
-            key={task.id}
-            className="px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-700"
-          >
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                {task.title}
-              </p>
-              <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                {task.status}
-              </span>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Your Tasks</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Task</TableHead>
+              <TableHead>Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {tasks.map((task) => (
+              <TableRow key={task.id}>
+                <TableCell className="font-medium">{task.title}</TableCell>
+                <TableCell>
+                  <Badge
+                    variant={
+                      task.status === 'Completed' ? 'default' : 'secondary'
+                    }
+                  >
+                    {task.status}
+                  </Badge>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 };
 
