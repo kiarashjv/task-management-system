@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Facebook, Github } from 'lucide-react';
+import { FaGoogle, FaGithub } from 'react-icons/fa';
 
 export default function LoginPage() {
   return (
@@ -41,12 +41,12 @@ export default function LoginPage() {
               </div>
               <div className="mt-6 flex gap-4">
                 <Button variant="outline" className="w-full">
-                  <Github className="mr-2 h-4 w-4" />
-                  Github
+                  <FaGoogle className="mr-2 h-4 w-4" />
+                  Google
                 </Button>
                 <Button variant="outline" className="w-full">
-                  <Facebook className="mr-2 h-4 w-4" />
-                  Facebook
+                  <FaGithub className="mr-2 h-4 w-4" />
+                  GitHub
                 </Button>
               </div>
             </div>
