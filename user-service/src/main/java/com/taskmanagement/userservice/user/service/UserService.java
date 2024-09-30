@@ -46,6 +46,12 @@ public class UserService implements IUserService, UserDetailsService {
     }
 
     @Override
+    public User getUserByUsername(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+    }
+
+    @Override
     public User updateUser(UUID id, User user) {
         return userRepository.findById(id)
                 .map(existingUser -> {
